@@ -1,0 +1,156 @@
+/*
+Copyright (C) 2024 <https://github.com/leveled-up>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+body {
+    font-family: sans-serif;
+    color: white;
+    user-select: none;
+}
+
+.focus {
+    background-color: rgb(186, 73, 73);
+}
+
+.shortbreak {
+    background-color: rgb(56, 133, 138);
+}
+
+.longbreak {
+    background-color: rgb(57, 112, 151);
+}
+
+header {
+    font-size: 24px;
+    font-weight: bolder;
+    margin-bottom: 10px;
+}
+
+header>a {
+    color: white;
+    text-decoration: none;
+    font-size: 12px;
+    vertical-align: text-bottom;
+    display: inline-block;
+    opacity: 0.8;
+}
+
+header>a:hover {
+    opacity: 1;
+}
+
+.container {
+    padding: 0px 12px;
+    max-width: 620px;
+    margin: auto;
+    text-align: center;
+    min-height: 1vh;
+}
+
+main {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 20px 0px 30px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+div.progressbar {
+    background-color: rgba(0, 0, 0, 0.1);
+    height: 1px;
+    margin-bottom: 20px;
+}
+
+div.progress {
+    height: 3px;
+    background-color: white;
+    border-radius: 100px;
+    transform: translateY(-1px);
+    width: 0%;
+}
+
+div.steps>button.active {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    opacity: 1;
+    font-weight: bold;
+}
+
+div.steps>button {
+    color: white;
+    border: none;
+    margin: 0px;
+    font-size: 16px;
+    padding: 2px 12px;
+    height: 28px;
+    background: none;
+}
+
+div.timer {
+    margin-top: 20px;
+    font-size: 120px;
+    font-weight: bold;
+}
+
+div.toggle {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+div.toggle>button {
+    cursor: pointer;
+    border: medium;
+    margin-top: 20px;
+    margin-bottom: 0px;
+    padding: 0px 12px;
+    border-radius: 4px;
+    font-size: 22px;
+    height: 55px;
+    font-weight: bold;
+    width: 200px;
+    background-color: white;
+}
+
+.focus div.toggle>button {
+    color: rgb(186, 73, 73);
+}
+
+.shortbreak div.toggle>button {
+    color: rgb(56, 133, 138);
+}
+
+.longbreak div.toggle>button {
+    color: rgb(57, 112, 151);
+}
+
+div.toggle>button.idle {
+    margin-top: 14px;
+    margin-bottom: 6px;
+    box-shadow: rgb(235, 235, 235) 0px 6px 0px;
+}
+
+div.counter {
+    display: inline-block;
+    font-size: 16px;
+    opacity: 0.8;
+    margin-bottom: 4px;
+}
+
+div.step-text {
+    font-size: 18px;
+    opacity: 0.8;
+}
