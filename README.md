@@ -2,6 +2,10 @@
 
 A minimalistic static web interface for the pomodoro time management technique (see: <https://en.wikipedia.org/wiki/Pomodoro_Technique>). Runs in your browser without any server interaction, just HTML + CSS + JS. Host it yourself. Pomofocus without the bullshit.
 
+## Try the GitHub-hosted version
+
+<https://leveled-up.github.io/librefocus/>
+
 ## License
 
 Copyright (C) 2024 <https://github.com/leveled-up>
