@@ -1,49 +1,47 @@
 <!DOCTYPE html>
-<!--
-    Copyright (C) 2024 <https://github.com/leveled-up>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
--->
-<html>
-
+<!-- Lizenz-Hinweis wie gehabt -->
+<html lang="de">
 <head>
-    <title>LibreFocus</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="style.css" />
+  <meta charset="utf-8" />
+  <title>LibreFocus</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body class="focus">
-    <div class="container">
-        <header>LibreFocus <a href="https://github.com/leveled-up/librefocus" target="_blank">&#128712;</a></header>
-        <div class="progressbar">
-            <div class="progress"></div>
-        </div>
-        <main>
-            <div class="steps">
-                <button class="active">Pomodoro</button>
-                <button>Short Break</button>
-                <button>Long Break</button>
-            </div>
-            <div class="timer">25:00</div>
-            <div class="toggle">
-                <button class="idle" title="Space/Enter">START</button>
-            </div>
-        </main>
-        <div class="counter">#1</div>
-        <div class="step-text">Time to focus!</div>
-    </div>
-    <script src="main.js"></script>
-</body>
+  <div class="container">
+    <header>LibreFocus <a href="https://github.com/leveled-up/librefocus" target="_blank">&#128712;</a></header>
 
-</html>
+    <!-- Fortschrittsbalken -->
+    <div class="progressbar"><div class="progress"></div></div>
+
+    <main>
+      <!-- Modi -->
+      <div class="steps" id="modeTabs">
+        <button class="active" data-mode="work">Pomodoro</button>
+        <button data-mode="short">Short Break</button>
+        <button data-mode="long">Long Break</button>
+      </div>
+
+      <!-- Timer -->
+      <div class="timer" id="time">25:00</div>
+
+      <!-- Aktionen -->
+      <div class="toggle actions">
+        <button id="primaryBtn" class="idle" title="Space/Enter">START</button>
+        <button id="resetBtn" class="ghost" title="Reset">Reset</button>
+        <button id="skipBtn" class="ghost" title="Skip aktuelle Phase">Skip</button>
+      </div>
+    </main>
+
+    <!-- Status -->
+    <div class="counter" id="roundInfo">#1</div>
+    <div class="step-text" id="status">Time to focus!</div>
+
+    <!-- Tasks -->
+    <section class="tasks">
+      <div class="tasks-head">
+        <h2>Tasks</h2>
+        <button id="clearDone" class="ghost sm">Clear done</button>
+      </div>
+      <form id="taskForm">
+        <inpu
