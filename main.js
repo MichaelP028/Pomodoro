@@ -3,160 +3,147 @@ Copyright (C) 2024 <https://github.com/leveled-up>
 AGPL-3.0-or-later
 */
 
-// jQuery-like shorthand
-const $ = document.querySelector.bind(document);
+// Query helpers
+const $  = sel => document.querySelector(sel);
+const $$ = sel => [...document.querySelectorAll(sel)];
 
-// Element references
+// Elemente
 const idleTitle = document.title;
-const startBtn   = $(".toggle>button");      // START/PAUSE
-const resetBtn   = $("#resetBtn");
-const skipBtn    = $("#skipBtn");
-const timerEl    = $(".timer");
-const progress   = $(".progress");
-const counterEl  = $(".counter");
-const stepTextEl = $(".step-text");
-const stepBtns   = [...document.querySelectorAll(".steps>button")];
+const startBtn  = $("#startBtn");
+const resetBtn  = $("#resetBtn");
+const skipBtn   = $("#skipBtn");
+const timeEl    = $("#time");
+const progress  = $(".progress");
+const roundEl   = $("#roundInfo");
+const statusEl  = $("#status");
+const tabBtns   = $$("#modeTabs > button");
+const ding      = $("#ding");
 
-// Config
+// Konfig
 const steps = [
-  { name: "focus",      dur: 25 * 60 * 1000, text: "Time to focus!" },
-  { name: "shortbreak", dur:  5 * 60 * 1000, text: "Time for a break!" },
-  { name: "longbreak",  dur: 15 * 60 * 1000, text: "Time for a break!" }
+  { key:"focus",      dur: 25*60*1000, text:"Time to focus!" },
+  { key:"shortbreak", dur:  5*60*1000, text:"Time for a break!" },
+  { key:"longbreak",  dur: 15*60*1000, text:"Time for a break!" }
 ];
-const ringUrl = "ring.mp3";
 const ROUNDS_UNTIL_LONG = 4;
+const ringUrl = "ring.mp3";
 
-// Global state
-let currentStep = 0;                                // 0=focus,1=short,2=long
-let count = Number(localStorage.getItem("lf_round") || "1");
+// Zustand
+let stepIndex = 0; // 0=focus,1=short,2=long
+let round = Number(localStorage.getItem("lf_round") || "1");
 let timeLeft = steps[0].dur;
 let startTime = null;
-let timeout = null;
-let refreshInterval = null;
+let tickId = null;
+let endId  = null;
 
-// --- helpers ---
-const toStr = n => n.toString().split(".")[0].padStart(2, "0");
-const fmt   = ms => {
-  const s = Math.max(0, Math.round(ms / 1000));
-  return `${toStr(s/60)}:${toStr(s%60)}`;
+// Helpers
+const pad = n => String(n).split(".")[0].padStart(2,"0");
+const fmt = ms => {
+  const s = Math.max(0, Math.round(ms/1000));
+  return `${pad(s/60)}:${pad(s%60)}`;
 };
-const setTitle = (ms) => document.title = `${fmt(ms)} - ${steps[currentStep].text}`;
-const setUIActiveTab = () => {
-  stepBtns.forEach((b,i) => b.classList.toggle("active", i === currentStep));
-  document.body.className = steps[currentStep].name;
-  stepTextEl.textContent = steps[currentStep].text;
-};
-
-// --- core ---
-const tick = () => {
-  let passed = startTime ? (Date.now() - startTime) : 0;
-  let left = timeLeft - passed;
-
-  // progress
-  const pct = 100 - (left / steps[currentStep].dur) * 100;
-  progress.style.width = `${Math.max(0, Math.min(100, pct))}%`;
-
-  // time text + title
-  timerEl.textContent = fmt(left);
-  if (startTime) setTitle(left);
-
-  if (left <= 0) end();
-};
-
-const start = () => {
-  if (refreshInterval) return;
+function setProgress(){
+  const total = steps[stepIndex].dur;
+  const left  = startTime ? timeLeft - (Date.now()-startTime) : timeLeft;
+  const pct = Math.max(0, Math.min(100, (1 - left/total) * 100));
+  progress.style.width = pct + "%";
+}
+function paint(){
+  const left = startTime ? timeLeft - (Date.now()-startTime) : timeLeft;
+  timeEl.textContent = fmt(left);
+  setProgress();
+  if(startTime) document.title = `${fmt(left)} - ${steps[stepIndex].text}`;
+}
+function setModeByIndex(i){
+  stepIndex = i;
+  timeLeft = steps[i].dur;
+  document.body.className = steps[i].key;
+  statusEl.textContent = steps[i].text;
+  tabBtns.forEach((b,idx)=> b.classList.toggle("active", idx===i));
+  paint();
+}
+function start(){
+  if(tickId) return;
   startTime = Date.now();
-  refreshInterval = setInterval(tick, 1000);
-  timeout = setTimeout(end, timeLeft);
-  startBtn.onclick = pause;
+  tickId = setInterval(tick, 1000);
+  endId  = setTimeout(end, timeLeft);
   startBtn.textContent = "PAUSE";
   startBtn.classList.remove("idle");
-  tick();
-};
-
-const pause = () => {
-  clearInterval(refreshInterval);
-  clearTimeout(timeout);
-  refreshInterval = null;
-  timeout = 0;
-  if (startTime) timeLeft -= (Date.now() - startTime);
+}
+function pause(){
+  if(!tickId) return;
+  clearInterval(tickId); tickId = null;
+  clearTimeout(endId);    endId  = null;
+  timeLeft -= (Date.now() - startTime);
   startTime = null;
-  startBtn.onclick = start;
   startBtn.textContent = "START";
   startBtn.classList.add("idle");
   document.title = idleTitle;
-  tick(); // refresh UI immediately
-};
-
-const reset = () => {
+  paint();
+}
+function reset(){
   pause();
-  timeLeft = steps[currentStep].dur;
-  tick();
-};
-
-const skip = () => {
-  // sofort aktuelle Phase beenden
-  if (refreshInterval) pause();
+  timeLeft = steps[stepIndex].dur;
+  paint();
+}
+function skip(){
+  pause();
   timeLeft = 0;
-  tick(); // triggert end()
-};
-
-const end = () => {
-  // Ring
-  try { new Audio(ringUrl).play(); } catch (err) { /* ignore */ }
-
-  startTime = null;
-
-  if (currentStep === 0) {
-    // von Fokus zu Pause wechseln (short/long)
-    const nextIsLong = (count % ROUNDS_UNTIL_LONG) === 0;
-    currentStep = nextIsLong ? 2 : 1;
-  } else {
-    // von Pause zurück zu Fokus + Runde hochzählen
-    currentStep = 0;
-    count += 1;
-    localStorage.setItem("lf_round", String(count));
+  end(); // sofort beenden
+}
+function tick(){
+  const left = timeLeft - (Date.now() - startTime);
+  if(left <= 0){ end(); return; }
+  paint();
+}
+function end(){
+  // Sound
+  try{
+    if(ding){ ding.currentTime = 0; ding.play(); }
+    else { new Audio(ringUrl).play().catch(()=>{}); }
+  }catch(e){}
+  // Mode wechseln
+  if(stepIndex === 0){
+    // Fokus -> Break (short/long)
+    const longNow = (round % ROUNDS_UNTIL_LONG) === 0;
+    setModeByIndex(longNow ? 2 : 1);
+  }else{
+    // Break -> Fokus + Runde++
+    round = (round % ROUNDS_UNTIL_LONG) + 1;
+    localStorage.setItem("lf_round", String(round));
+    setModeByIndex(0);
   }
-
-  counterEl.textContent = `#${count}`;
-  timeLeft = steps[currentStep].dur;
-  setUIActiveTab();
-
-  // zurück in IDLE
-  startBtn.onclick = start;
+  roundEl.textContent = `#${round}`;
+  // zurück in Idle
+  startTime = null;
   startBtn.textContent = "START";
   startBtn.classList.add("idle");
   document.title = idleTitle;
+  paint();
+}
 
-  tick();
-};
+// Events
+startBtn.addEventListener("click", ()=> tickId ? pause() : start());
+resetBtn.addEventListener("click", reset);
+skipBtn .addEventListener("click", skip);
 
-// --- tab switching (Pomodoro/Short/Long) ---
-stepBtns.forEach((btn, i) => {
-  btn.addEventListener("click", () => {
-    // nicht mitten im Lauf den Modus wechseln
+// Tabs
+tabBtns.forEach((b,idx)=>{
+  b.addEventListener("click", ()=>{
     pause();
-    currentStep = i;
-    timeLeft = steps[currentStep].dur;
-    setUIActiveTab();
-    tick();
+    setModeByIndex(idx);
   });
 });
 
-// --- keyboard: Space/Enter toggles ---
-document.addEventListener("keydown", (e) => {
-  if (e.code === "Space" || e.code === "Enter") {
+// Hotkeys Space/Enter
+document.addEventListener("keydown", (e)=>{
+  if(e.code==="Space" || e.code==="Enter"){
     e.preventDefault();
-    (refreshInterval ? pause : start)();
+    tickId ? pause() : start();
   }
 });
 
-// --- wire buttons ---
-startBtn.onclick = start;
-resetBtn && (resetBtn.onclick = reset);
-skipBtn  && (skipBtn.onclick  = skip);
-
-// --- init ---
-counterEl.textContent = `#${count}`;
-setUIActiveTab();
-tick();
+// Init
+setModeByIndex(0);
+roundEl.textContent = `#${round}`;
+paint();
