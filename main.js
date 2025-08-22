@@ -1,11 +1,8 @@
 /*
-Copyright (C) 2024 <https://github.com/leveled-up>
-AGPL-3.0-or-later
+AGPL-3.0-or-later — https://github.com/leveled-up
 */
-
-// Query helpers
-const $  = sel => document.querySelector(sel);
-const $$ = sel => [...document.querySelectorAll(sel)];
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
 
 // Elemente
 const idleTitle = document.title;
@@ -29,7 +26,7 @@ const ROUNDS_UNTIL_LONG = 4;
 const ringUrl = "ring.mp3";
 
 // Zustand
-let stepIndex = 0; // 0=focus,1=short,2=long
+let stepIndex = 0;
 let round = Number(localStorage.getItem("lf_round") || "1");
 let timeLeft = steps[0].dur;
 let startTime = null;
@@ -54,12 +51,16 @@ function paint(){
   setProgress();
   if(startTime) document.title = `${fmt(left)} - ${steps[stepIndex].text}`;
 }
+function setModeByKey(key){
+  const i = steps.findIndex(s=>s.key===key);
+  setModeByIndex(i < 0 ? 0 : i);
+}
 function setModeByIndex(i){
   stepIndex = i;
   timeLeft = steps[i].dur;
   document.body.className = steps[i].key;
   statusEl.textContent = steps[i].text;
-  tabBtns.forEach((b,idx)=> b.classList.toggle("active", idx===i));
+  tabBtns.forEach((b)=> b.classList.toggle("active", b.dataset.mode === steps[i].key));
   paint();
 }
 function start(){
@@ -89,7 +90,7 @@ function reset(){
 function skip(){
   pause();
   timeLeft = 0;
-  end(); // sofort beenden
+  end();
 }
 function tick(){
   const left = timeLeft - (Date.now() - startTime);
@@ -97,24 +98,19 @@ function tick(){
   paint();
 }
 function end(){
-  // Sound
   try{
     if(ding){ ding.currentTime = 0; ding.play(); }
     else { new Audio(ringUrl).play().catch(()=>{}); }
   }catch(e){}
-  // Mode wechseln
   if(stepIndex === 0){
-    // Fokus -> Break (short/long)
     const longNow = (round % ROUNDS_UNTIL_LONG) === 0;
     setModeByIndex(longNow ? 2 : 1);
   }else{
-    // Break -> Fokus + Runde++
     round = (round % ROUNDS_UNTIL_LONG) + 1;
     localStorage.setItem("lf_round", String(round));
     setModeByIndex(0);
   }
   roundEl.textContent = `#${round}`;
-  // zurück in Idle
   startTime = null;
   startBtn.textContent = "START";
   startBtn.classList.add("idle");
@@ -122,20 +118,20 @@ function end(){
   paint();
 }
 
-// Events
-startBtn.addEventListener("click", ()=> tickId ? pause() : start());
-resetBtn.addEventListener("click", reset);
-skipBtn .addEventListener("click", skip);
+// Button-Events
+startBtn?.addEventListener("click", ()=> tickId ? pause() : start());
+resetBtn?.addEventListener("click", reset);
+skipBtn ?.addEventListener("click", skip);
 
 // Tabs
-tabBtns.forEach((b,idx)=>{
+tabBtns.forEach((b)=>{
   b.addEventListener("click", ()=>{
     pause();
-    setModeByIndex(idx);
+    setModeByKey(b.dataset.mode);
   });
 });
 
-// Hotkeys Space/Enter
+// Hotkeys
 document.addEventListener("keydown", (e)=>{
   if(e.code==="Space" || e.code==="Enter"){
     e.preventDefault();
@@ -147,3 +143,44 @@ document.addEventListener("keydown", (e)=>{
 setModeByIndex(0);
 roundEl.textContent = `#${round}`;
 paint();
+
+/* ---------- Tasks (optional, läuft nur wenn HTML vorhanden) ---------- */
+const taskForm  = $("#taskForm");
+const taskInput = $("#taskInput");
+const taskList  = $("#taskList");
+const clearDone = $("#clearDone");
+const TASK_KEY  = "lf_tasks";
+
+function loadTasks(){ try{return JSON.parse(localStorage.getItem(TASK_KEY)||"[]");}catch{ return []; } }
+function saveTasks(t){ localStorage.setItem(TASK_KEY, JSON.stringify(t)); }
+function renderTasks(){
+  if(!taskList) return;
+  const tasks = loadTasks();
+  taskList.innerHTML = "";
+  tasks.forEach((t,i)=>{
+    const li = document.createElement("li");
+    li.className = "task";
+    li.innerHTML = `
+      <input type="checkbox" ${t.done?"checked":""} />
+      <div class="title">${t.title}</div>
+      <button class="del">✕</button>`;
+    li.querySelector("input").addEventListener("change",(e)=>{
+      tasks[i].done = e.target.checked; saveTasks(tasks); renderTasks();
+    });
+    li.querySelector(".del").addEventListener("click",()=>{
+      tasks.splice(i,1); saveTasks(tasks); renderTasks();
+    });
+    taskList.appendChild(li);
+  });
+}
+taskForm?.addEventListener("submit",(e)=>{
+  e.preventDefault();
+  const title = (taskInput?.value || "").trim();
+  if(!title) return;
+  const tasks = loadTasks(); tasks.push({title, done:false}); saveTasks(tasks);
+  taskInput.value = ""; renderTasks();
+});
+clearDone?.addEventListener("click", ()=>{
+  const tasks = loadTasks().filter(t=>!t.done); saveTasks(tasks); renderTasks();
+});
+renderTasks();
