@@ -1,9 +1,8 @@
 <!DOCTYPE html>
-<!-- Lizenz-Hinweis wie gehabt -->
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <title>LibreFocus</title>
+  <title>Pomodoro</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -11,29 +10,24 @@
   <div class="container">
     <header>LibreFocus <a href="https://github.com/leveled-up/librefocus" target="_blank">&#128712;</a></header>
 
-    <!-- Fortschrittsbalken -->
     <div class="progressbar"><div class="progress"></div></div>
 
     <main>
-      <!-- Modi -->
       <div class="steps" id="modeTabs">
-        <button class="active" data-mode="work">Pomodoro</button>
-        <button data-mode="short">Short Break</button>
-        <button data-mode="long">Long Break</button>
+        <button class="active" data-mode="focus">Pomodoro</button>
+        <button data-mode="shortbreak">Short Break</button>
+        <button data-mode="longbreak">Long Break</button>
       </div>
 
-      <!-- Timer -->
       <div class="timer" id="time">25:00</div>
 
-      <!-- Aktionen -->
-      <div class="toggle actions">
-        <button id="primaryBtn" class="idle" title="Space/Enter">START</button>
+      <div class="toggle">
+        <button id="startBtn" class="idle" title="Space/Enter">START</button>
         <button id="resetBtn" class="ghost" title="Reset">Reset</button>
-        <button id="skipBtn" class="ghost" title="Skip aktuelle Phase">Skip</button>
+        <button id="skipBtn"  class="ghost" title="Skip">Skip</button>
       </div>
     </main>
 
-    <!-- Status -->
     <div class="counter" id="roundInfo">#1</div>
     <div class="step-text" id="status">Time to focus!</div>
 
@@ -41,7 +35,17 @@
     <section class="tasks">
       <div class="tasks-head">
         <h2>Tasks</h2>
-        <button id="clearDone" class="ghost sm">Clear done</button>
+        <button id="clearDone" class="ghost">Clear done</button>
       </div>
       <form id="taskForm">
-        <inpu
+        <input id="taskInput" placeholder="Neue Aufgabe hinzufügen…" />
+        <button class="ghost" type="submit">Add</button>
+      </form>
+      <ul id="taskList"></ul>
+    </section>
+  </div>
+
+  <audio id="ding" src="ring.mp3" preload="auto"></audio>
+  <script src="main.js"></script>
+</body>
+</html>
