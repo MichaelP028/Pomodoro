@@ -1,18 +1,6 @@
 /*
 Copyright (C) 2024 <https://github.com/leveled-up>
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
+AGPL-3.0-or-later
 */
 
 // jQuery-like shorthand
@@ -20,118 +8,155 @@ const $ = document.querySelector.bind(document);
 
 // Element references
 const idleTitle = document.title;
-const startBtn = $(".toggle>button");
-const timer = $(".timer");
-const progress = $(".progress");
-const counter = $(".counter");
-const stepText = $(".step-text");
-const stepBtns = [...document.querySelectorAll(".steps>button")];
+const startBtn   = $(".toggle>button");      // START/PAUSE
+const resetBtn   = $("#resetBtn");
+const skipBtn    = $("#skipBtn");
+const timerEl    = $(".timer");
+const progress   = $(".progress");
+const counterEl  = $(".counter");
+const stepTextEl = $(".step-text");
+const stepBtns   = [...document.querySelectorAll(".steps>button")];
 
 // Config
 const steps = [
-    { name: "focus", dur: 25 * 60 * 1000, text: "Time to focus!" },
-    { name: "shortbreak", dur: 5 * 60 * 1000, text: "Time for a break!" },
-    { name: "longbreak", dur: 15 * 60 * 1000, text: "Time for a break!" }
+  { name: "focus",      dur: 25 * 60 * 1000, text: "Time to focus!" },
+  { name: "shortbreak", dur:  5 * 60 * 1000, text: "Time for a break!" },
+  { name: "longbreak",  dur: 15 * 60 * 1000, text: "Time for a break!" }
 ];
 const ringUrl = "ring.mp3";
+const ROUNDS_UNTIL_LONG = 4;
 
-// Global vars
-let currentStep = 0;
-let count = 1;
+// Global state
+let currentStep = 0;                                // 0=focus,1=short,2=long
+let count = Number(localStorage.getItem("lf_round") || "1");
 let timeLeft = steps[0].dur;
 let startTime = null;
 let timeout = null;
 let refreshInterval = null;
 
-// main features
+// --- helpers ---
+const toStr = n => n.toString().split(".")[0].padStart(2, "0");
+const fmt   = ms => {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return `${toStr(s/60)}:${toStr(s%60)}`;
+};
+const setTitle = (ms) => document.title = `${fmt(ms)} - ${steps[currentStep].text}`;
+const setUIActiveTab = () => {
+  stepBtns.forEach((b,i) => b.classList.toggle("active", i === currentStep));
+  document.body.className = steps[currentStep].name;
+  stepTextEl.textContent = steps[currentStep].text;
+};
+
+// --- core ---
+const tick = () => {
+  let passed = startTime ? (Date.now() - startTime) : 0;
+  let left = timeLeft - passed;
+
+  // progress
+  const pct = 100 - (left / steps[currentStep].dur) * 100;
+  progress.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+
+  // time text + title
+  timerEl.textContent = fmt(left);
+  if (startTime) setTitle(left);
+
+  if (left <= 0) end();
+};
+
 const start = () => {
-    startTime = new Date().valueOf();
-    refreshInterval = setInterval(tick, 1000);
-    timeout = setTimeout(end, timeLeft);
-    startBtn.onclick = pause;
-    startBtn.innerText = "PAUSE";
-    startBtn.classList.remove("idle");
-    tick();
+  if (refreshInterval) return;
+  startTime = Date.now();
+  refreshInterval = setInterval(tick, 1000);
+  timeout = setTimeout(end, timeLeft);
+  startBtn.onclick = pause;
+  startBtn.textContent = "PAUSE";
+  startBtn.classList.remove("idle");
+  tick();
 };
 
 const pause = () => {
-    clearInterval(refreshInterval);
-    clearTimeout(timeout);
-    refreshInterval = null;
-    timeout = 0;
-    let alreadyPassed = (new Date().valueOf() - startTime);
-    timeLeft -= alreadyPassed;
-    startTime = null;
-    startBtn.onclick = start;
-    startBtn.innerText = "START";
-    startBtn.classList.add("idle");
-    document.title = idleTitle;
+  clearInterval(refreshInterval);
+  clearTimeout(timeout);
+  refreshInterval = null;
+  timeout = 0;
+  if (startTime) timeLeft -= (Date.now() - startTime);
+  startTime = null;
+  startBtn.onclick = start;
+  startBtn.textContent = "START";
+  startBtn.classList.add("idle");
+  document.title = idleTitle;
+  tick(); // refresh UI immediately
 };
 
-const tick = () => {
-    let alreadyPassed = 0;
-    if (startTime)
-        alreadyPassed = (new Date().valueOf() - startTime);
-    let _timeLeft = (timeLeft - alreadyPassed);
-    let percent = 100 - (_timeLeft / steps[currentStep].dur) * 100;
-    progress.style.width = percent.toString() + "%";
+const reset = () => {
+  pause();
+  timeLeft = steps[currentStep].dur;
+  tick();
+};
 
-    _timeLeft = Math.round(_timeLeft / 1000);
-    let sec = _timeLeft % 60;
-    let min = _timeLeft / 60;
-
-    const toStr = n => n.toString().split(".")[0].padStart(2, "0");
-    let str = toStr(min) + ":" + toStr(sec);
-    timer.innerText = str;
-    if (startTime)
-        document.title = str + " - " + steps[currentStep].text;
+const skip = () => {
+  // sofort aktuelle Phase beenden
+  if (refreshInterval) pause();
+  timeLeft = 0;
+  tick(); // triggert end()
 };
 
 const end = () => {
-    // Ring
-    try {
-        let audio = new Audio(ringUrl);
-        audio.play();
-    } catch (err) {
-        console.debug(err);
-    }
+  // Ring
+  try { new Audio(ringUrl).play(); } catch (err) { /* ignore */ }
 
-    // Next step
-    startTime = null;
-    if (currentStep == 0)
-        // Break: short or long?
-        currentStep = (count % 4 == 0) ? 2 : 1;
-    else {
-        // Focus
-        currentStep = 0;
-        count += 1;
-    }
+  startTime = null;
 
-    let stepProp = steps[currentStep];
-    document.body.className = stepProp.name;
+  if (currentStep === 0) {
+    // von Fokus zu Pause wechseln (short/long)
+    const nextIsLong = (count % ROUNDS_UNTIL_LONG) === 0;
+    currentStep = nextIsLong ? 2 : 1;
+  } else {
+    // von Pause zurück zu Fokus + Runde hochzählen
+    currentStep = 0;
+    count += 1;
+    localStorage.setItem("lf_round", String(count));
+  }
 
-    counter.innerText = "#" + count.toString();
-    stepText.innerText = steps[currentStep].text;
+  counterEl.textContent = `#${count}`;
+  timeLeft = steps[currentStep].dur;
+  setUIActiveTab();
 
-    timeLeft = stepProp.dur;
-    startBtn.onclick = start;
-    startBtn.innerText = "START";
-    startBtn.classList.add("idle");
-    document.title = idleTitle;
+  // zurück in IDLE
+  startBtn.onclick = start;
+  startBtn.textContent = "START";
+  startBtn.classList.add("idle");
+  document.title = idleTitle;
 
-    for (let btn of stepBtns)
-        btn.className = "";
-    stepBtns[currentStep].className = "active";
-
-    tick();
+  tick();
 };
 
-// define events
+// --- tab switching (Pomodoro/Short/Long) ---
+stepBtns.forEach((btn, i) => {
+  btn.addEventListener("click", () => {
+    // nicht mitten im Lauf den Modus wechseln
+    pause();
+    currentStep = i;
+    timeLeft = steps[currentStep].dur;
+    setUIActiveTab();
+    tick();
+  });
+});
+
+// --- keyboard: Space/Enter toggles ---
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space" || e.code === "Enter") {
+    e.preventDefault();
+    (refreshInterval ? pause : start)();
+  }
+});
+
+// --- wire buttons ---
 startBtn.onclick = start;
-startBtn.addEventListener("keydown", event => {
-    event.preventDefault();
-});
-document.addEventListener("keydown", event => {
-    if (event.key == "Enter" || event.key == " ")
-        startBtn.dispatchEvent(new Event("click"));
-});
+resetBtn && (resetBtn.onclick = reset);
+skipBtn  && (skipBtn.onclick  = skip);
+
+// --- init ---
+counterEl.textContent = `#${count}`;
+setUIActiveTab();
+tick();
